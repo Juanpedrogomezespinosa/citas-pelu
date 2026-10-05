@@ -1,0 +1,27 @@
+# MySQL 8.4 para desarrollo local.
+# Solo crea la base de datos y el usuario; el esquema lo gestionan las
+# migraciones (cd backend && npm run db:migrate).
+# Reiniciar desde cero: docker compose down -v && docker compose up -d
+services:
+  db:
+    image: mysql:8.4
+    container_name: peluqueria-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_dev_password}
+      MYSQL_DATABASE: peluqueria
+      MYSQL_USER: peluqueria_app
+      MYSQL_PASSWORD: peluqueria_dev_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  mysql_data:

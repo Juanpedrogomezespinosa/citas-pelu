@@ -1,0 +1,8 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import { GestionEquipo } from '../components/equipo/GestionEquipo';
+---
+
+<AppLayout title="Equipo y horarios" description="Profesionales, horario semanal, vacaciones, bajas y festivos.">
+  <GestionEquipo client:load />
+</AppLayout>

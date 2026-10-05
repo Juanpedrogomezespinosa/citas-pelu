@@ -1,0 +1,126 @@
+# Despliegue de producción en un único servidor.
+#
+#   cp .env.production.example .env.production   # y rellena los secretos
+#   docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+#
+# Servicios: MySQL, Redis, API (migra al arrancar), web (nginx + estáticos +
+# proxy /api), backups diarios y (opcional, perfil "monitoring") Prometheus.
+# Solo `web` publica puerto; el resto vive en la red interna.
+
+name: peluqueria
+
+x-api-env: &api-env
+  NODE_ENV: production
+  PORT: 4000
+  # Saltos de proxy de confianza: 1 = solo nginx; 2 = proxy TLS (Caddy/Traefik) + nginx
+  TRUST_PROXY: ${TRUST_PROXY:-2}
+  APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Madrid}
+  PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?Define PUBLIC_BASE_URL}
+  CORS_ORIGINS: ${PUBLIC_BASE_URL}
+  DB_HOST: db
+  DB_PORT: 3306
+  DB_USER: peluqueria_app
+  DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD}
+  DB_NAME: peluqueria
+  REDIS_URL: redis://redis:6379
+  JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET}
+  JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-8h}
+  BUSINESS_NAME: ${BUSINESS_NAME:-Peluquería}
+  BUSINESS_OPEN_TIME: ${BUSINESS_OPEN_TIME:-09:00}
+  BUSINESS_CLOSE_TIME: ${BUSINESS_CLOSE_TIME:-20:00}
+  METRICS_TOKEN: ${METRICS_TOKEN:-}
+  REMINDER_ENABLED: 'true'
+  WHATSAPP_PROVIDER: ${WHATSAPP_PROVIDER:-console}
+  TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+  TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+  TWILIO_WHATSAPP_FROM: ${TWILIO_WHATSAPP_FROM:-}
+  TWILIO_CONTENT_SID_CONFIRMACION: ${TWILIO_CONTENT_SID_CONFIRMACION:-}
+  TWILIO_CONTENT_SID_RECORDATORIO: ${TWILIO_CONTENT_SID_RECORDATORIO:-}
+  TWILIO_CONTENT_SID_CAMBIO: ${TWILIO_CONTENT_SID_CAMBIO:-}
+  TWILIO_CONTENT_SID_CANCELACION: ${TWILIO_CONTENT_SID_CANCELACION:-}
+  META_ACCESS_TOKEN: ${META_ACCESS_TOKEN:-}
+  META_PHONE_NUMBER_ID: ${META_PHONE_NUMBER_ID:-}
+  META_VERIFY_TOKEN: ${META_VERIFY_TOKEN:-}
+  META_APP_SECRET: ${META_APP_SECRET:-}
+  META_TEMPLATE_CONFIRMACION: ${META_TEMPLATE_CONFIRMACION:-}
+  META_TEMPLATE_RECORDATORIO: ${META_TEMPLATE_RECORDATORIO:-}
+  META_TEMPLATE_CAMBIO: ${META_TEMPLATE_CAMBIO:-}
+  META_TEMPLATE_CANCELACION: ${META_TEMPLATE_CANCELACION:-}
+  RGPD_ANONIMIZACION_AUTOMATICA: ${RGPD_ANONIMIZACION_AUTOMATICA:-false}
+  RGPD_RETENCION_MESES: ${RGPD_RETENCION_MESES:-36}
+
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Define MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: peluqueria
+      MYSQL_USER: peluqueria_app
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      TZ: ${APP_TIMEZONE:-Europe/Madrid}
+    command: ['--character-set-server=utf8mb4', '--collation-server=utf8mb4_unicode_ci']
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ['redis-server', '--save', '', '--appendonly', 'no'] # solo contadores efímeros
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    environment: *api-env
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - '${HTTP_PORT:-80}:80'
+    depends_on:
+      api: { condition: service_healthy }
+
+  # Copia de seguridad diaria (mysqldump --single-transaction: consistente y sin
+  # bloquear la operativa) con retención configurable. Ver docs/operacion.md.
+  backup:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_PWD: ${MYSQL_ROOT_PASSWORD}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      BACKUP_HOUR: ${BACKUP_HOUR:-03}
+      TZ: ${APP_TIMEZONE:-Europe/Madrid}
+    entrypoint: ['sh', '/ops/backup/backup-loop.sh']
+    volumes:
+      - ./ops/backup:/ops/backup:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+    depends_on:
+      db: { condition: service_healthy }
+
+  # Monitorización opcional: docker compose ... --profile monitoring up -d
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: ['monitoring']
+    restart: unless-stopped
+    # Lee el token de ops/prometheus/metrics-token (mismo valor que METRICS_TOKEN)
+    volumes:
+      - ./ops/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    ports:
+      - '127.0.0.1:9090:9090' # solo accesible desde el propio servidor
+
+volumes:
+  mysql_data:
+  prometheus_data:

@@ -1,0 +1,12 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import { ActividadWhatsApp } from '../components/citas/ActividadWhatsApp';
+import { Dashboard } from '../components/citas/Dashboard';
+---
+
+<AppLayout title="Agenda" description="Citas del día, confirmaciones y recordatorios.">
+  <!-- Crítico y visible al cargar: se hidrata de inmediato -->
+  <Dashboard client:load />
+  <!-- Debajo del pliegue: solo se descarga y se hidrata al hacer scroll hasta él -->
+  <ActividadWhatsApp client:visible />
+</AppLayout>

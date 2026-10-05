@@ -1,0 +1,8 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import { MiCuenta } from '../components/cuenta/MiCuenta';
+---
+
+<AppLayout title="Mi cuenta" description="Contraseña y sesiones.">
+  <MiCuenta client:load />
+</AppLayout>

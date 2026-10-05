@@ -1,0 +1,39 @@
+---
+import '../styles/global.css';
+import { LoginForm } from '../components/auth/LoginForm';
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <title>Acceso · Peluquería</title>
+  </head>
+  <body class="grid min-h-dvh font-sans lg:grid-cols-2">
+    <section class="hidden flex-col justify-between bg-brand-900 p-12 text-brand-50 lg:flex" aria-hidden="true">
+      <p class="font-display text-2xl font-semibold">Salón</p>
+      <div>
+        <p class="font-display text-4xl leading-tight font-medium">Cada cita, en su sitio.<br />Cada cliente, como en casa.</p>
+        <p class="mt-4 max-w-md text-brand-200">Agenda, fichas de cliente y recordatorios por WhatsApp en un solo panel.</p>
+      </div>
+      <p class="text-sm text-brand-300">Panel interno de gestión</p>
+    </section>
+
+    <main class="flex items-center justify-center px-4 py-12">
+      <div class="w-full max-w-sm">
+        <h1 class="font-display text-3xl font-semibold text-stone-900">Hola de nuevo</h1>
+        <p class="mt-1 mb-8 text-sm text-stone-600">Accede con tu cuenta del salón.</p>
+        <LoginForm client:load />
+      </div>
+    </main>
+  </body>
+</html>

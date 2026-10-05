@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.astro/
+*.log
+.DS_Store
+
+# Secretos: solo se versionan las plantillas *.example
+.env
+.env.*
+!.env.example
+!.env.production.example
+ops/prometheus/metrics-token
+
+# Copias de seguridad de la base de datos (¡guárdalas fuera del repositorio!)
+backups/
+
+# Herramientas locales de desarrollo con Claude Code (no se publican)
+skills/
+CLAUDE.md

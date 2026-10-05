@@ -1,0 +1,162 @@
+---
+/**
+ * Layout del panel. HTML estático sin JS salvo:
+ *  - un script inline mínimo que redirige al login si no hay sesión (antes de
+ *    que se vea nada) y abre/cierra el menú en móvil;
+ *  - la isla UserMenu, hidratada con client:idle (no es crítica).
+ */
+import '../styles/global.css';
+import { UserMenu } from '../components/auth/UserMenu';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+
+type Rol = 'admin' | 'recepcion' | 'empleado';
+interface ItemNav {
+  href: string;
+  label: string;
+  icon: string;
+  /** Roles que ven el enlace (el backend aplica los permisos reales) */
+  roles: Rol[];
+}
+
+const TODOS: Rol[] = ['admin', 'recepcion', 'empleado'];
+const nav: ItemNav[] = [
+  { href: '/', label: 'Agenda', roles: TODOS, icon: 'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5' },
+  { href: '/citas/nueva', label: 'Nueva cita', roles: ['admin', 'recepcion'], icon: 'M12 4.5v15m7.5-7.5h-15' },
+  { href: '/clientes', label: 'Clientes', roles: TODOS, icon: 'M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z' },
+  { href: '/historial', label: 'Historial', roles: TODOS, icon: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' },
+  { href: '/caja', label: 'Caja', roles: ['admin', 'recepcion'], icon: 'M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z' },
+  { href: '/equipo', label: 'Equipo y horarios', roles: ['admin', 'recepcion'], icon: 'M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z' },
+  { href: '/servicios', label: 'Servicios', roles: ['admin'], icon: 'M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z M6 6h.008v.008H6V6Z' },
+  { href: '/usuarios', label: 'Usuarios', roles: ['admin'], icon: 'M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z' },
+];
+
+const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description ?? 'Gestión de citas de la peluquería'} />
+    <meta name="robots" content="noindex" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <title>{title} · Peluquería</title>
+    <script is:inline>
+      // Pista NO sensible (nombre y rol) para pintar el menú al instante. La
+      // sesión real (cookie httpOnly) la valida cada isla contra /api/auth/me.
+      (function () {
+        var u = null;
+        try { u = JSON.parse(localStorage.getItem('peluqueria.usuario') || 'null'); } catch (e) {}
+        if (!u) { location.replace('/login'); return; }
+        document.documentElement.dataset.rol = u.rol;
+      })();
+    </script>
+    <style is:inline>
+      /* Oculta los enlaces del menú que no corresponden al rol (antes de pintar: sin parpadeo) */
+      html[data-rol='recepcion'] [data-roles]:not([data-roles*='recepcion']),
+      html[data-rol='empleado'] [data-roles]:not([data-roles*='empleado']) { display: none; }
+    </style>
+  </head>
+  <body class="min-h-dvh font-sans">
+    <a href="#contenido" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:shadow">
+      Saltar al contenido
+    </a>
+
+    <!-- Barra superior (móvil) -->
+    <header class="sticky top-0 z-30 flex items-center justify-between border-b border-stone-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
+      <a href="/" class="font-display text-lg font-semibold text-brand-800">Salón&nbsp;·&nbsp;Citas</a>
+      <button
+        id="menu-toggle"
+        type="button"
+        aria-controls="sidebar"
+        aria-expanded="false"
+        class="rounded-md p-2 text-stone-700 hover:bg-stone-100 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none"
+      >
+        <span class="sr-only">Abrir menú</span>
+        <svg class="size-6" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"></path>
+        </svg>
+      </button>
+    </header>
+
+    <div class="lg:flex">
+      <!-- Barra lateral -->
+      <aside
+        id="sidebar"
+        class="fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-stone-200 bg-white motion-safe:transition-transform data-[open=true]:translate-x-0 lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0"
+      >
+        <div class="px-6 pt-6 pb-4">
+          <a href="/" class="font-display text-2xl font-semibold text-brand-800">Salón</a>
+          <p class="text-xs tracking-wide text-stone-500 uppercase">Gestión de citas</p>
+        </div>
+        <nav aria-label="Principal" class="flex-1 px-3">
+          <ul class="space-y-1">
+            {
+              nav.map((item) => (
+                <li data-roles={item.roles.join(',')}>
+                  <a
+                    href={item.href}
+                    aria-current={isActive(item.href) ? 'page' : undefined}
+                    class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-100 hover:text-stone-900 focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:outline-none aria-[current=page]:bg-brand-50 aria-[current=page]:text-brand-800"
+                  >
+                    <svg class="size-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" d={item.icon} />
+                    </svg>
+                    {item.label}
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+        </nav>
+        <div class="border-t border-stone-200 p-4">
+          <UserMenu client:idle />
+        </div>
+      </aside>
+      <div id="sidebar-overlay" class="fixed inset-0 z-30 hidden bg-stone-900/40 lg:hidden"></div>
+
+      <main id="contenido" class="min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-10 lg:py-10">
+        <div class="mx-auto max-w-7xl">
+          <header class="mb-6">
+            <h1 class="font-display text-2xl font-semibold text-stone-900 sm:text-3xl">{title}</h1>
+            {description && <p class="mt-1 text-sm text-stone-600">{description}</p>}
+          </header>
+          <slot />
+        </div>
+      </main>
+    </div>
+
+    <script>
+      // Menú lateral en móvil (sin framework: no merece una isla)
+      const toggle = document.getElementById('menu-toggle');
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebar-overlay');
+
+      function setOpen(open: boolean) {
+        sidebar?.setAttribute('data-open', String(open));
+        toggle?.setAttribute('aria-expanded', String(open));
+        overlay?.classList.toggle('hidden', !open);
+      }
+
+      toggle?.addEventListener('click', () => setOpen(sidebar?.getAttribute('data-open') !== 'true'));
+      overlay?.addEventListener('click', () => setOpen(false));
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') setOpen(false);
+      });
+    </script>
+  </body>
+</html>

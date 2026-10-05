@@ -1,0 +1,23 @@
+# Prometheus: recoge las métricas de la API por la red interna de Docker.
+# El token se pasa con la variable METRICS_TOKEN del contenedor.
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+rule_files:
+  - /etc/prometheus/alertas.yml
+
+scrape_configs:
+  - job_name: peluqueria-api
+    metrics_path: /api/metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/metrics-token
+    static_configs:
+      - targets: ['api:4000']
+
+# Para recibir avisos (email, Telegram, Slack...) añade Alertmanager:
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: ['alertmanager:9093']

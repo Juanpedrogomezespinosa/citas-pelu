@@ -1,0 +1,8 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import { AppointmentHistory } from '../components/citas/AppointmentHistory';
+---
+
+<AppLayout title="Historial de citas" description="Busca citas pasadas y futuras y consulta sus mensajes de WhatsApp.">
+  <AppointmentHistory client:load />
+</AppLayout>

@@ -1,0 +1,42 @@
+# Reglas de alerta de la API de la peluquería
+groups:
+  - name: peluqueria
+    rules:
+      - alert: ApiCaida
+        expr: up{job="peluqueria-api"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: La API no responde
+          description: Prometheus no puede leer las métricas de la API desde hace 2 minutos.
+
+      - alert: ColaWhatsAppAtascada
+        expr: outbox_antiguedad_segundos > 900
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: Mensajes de WhatsApp sin enviar
+          description: Hay mensajes en cola desde hace más de 15 minutos. Revisa el proveedor de WhatsApp y los logs de la API.
+
+      - alert: WhatsAppFallando
+        expr: increase(whatsapp_envios_total{resultado="fallido"}[1h]) > 3
+        labels: { severity: warning }
+        annotations:
+          summary: Envíos de WhatsApp fallando
+          description: Más de 3 mensajes de WhatsApp han fallado definitivamente en la última hora.
+
+      - alert: ErroresServidor
+        expr: sum(rate(http_request_duration_seconds_count{status=~"5.."}[5m])) > 0.1
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: La API devuelve errores 5xx
+          description: Más de 0,1 errores de servidor por segundo durante 5 minutos.
+
+      - alert: ApiLenta
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m]))) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: La API va lenta
+          description: El percentil 95 de las peticiones supera 1 segundo.

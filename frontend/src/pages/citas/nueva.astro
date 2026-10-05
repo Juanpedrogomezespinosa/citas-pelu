@@ -1,0 +1,8 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro';
+import { AppointmentForm } from '../../components/citas/AppointmentForm';
+---
+
+<AppLayout title="Agendar cita" description="Elige cliente, servicios y una hora libre del profesional.">
+  <AppointmentForm client:load />
+</AppLayout>
